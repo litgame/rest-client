@@ -1,0 +1,17 @@
+name: litgame_client
+description: litgame-client
+version: 0.0.1
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+environment:
+  sdk: ">=2.12.0-0 <3.0.0"
+
+dependencies:
+  meta: ^1.3.0
+  rest_client: ^2.0.1+1
+
+dev_dependencies:
+  pedantic: ^1.11.0
+  test: ^1.17.2
+  litgame_server:
+    git: https://github.com/litgame/rest-server.git
