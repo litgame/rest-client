@@ -32,6 +32,13 @@ class GameClient {
     }
   }
 
+  String _addPrefix(String source) {
+    if (!source.startsWith(_idPrefix)) {
+      return _idPrefix + source;
+    }
+    return source;
+  }
+
   Future<String> get version async {
     final response = await _get('/version');
     return response.body['version'];
@@ -50,8 +57,10 @@ class GameClient {
   }
 
   Future<String> startGame(String gameId, String adminId) async {
-    final response = await _put('/api/game/start',
-        {'gameId': _idPrefix + gameId, 'adminId': _idPrefix + adminId});
+    gameId = _addPrefix(gameId);
+    adminId = _addPrefix(adminId);
+    final response =
+        await _put('/api/game/start', {'gameId': gameId, 'adminId': adminId});
 
     if (response.body['gameId'] == null) throw 'Invalid response format';
     if (response.body['status'].toString() != 'started')
@@ -60,16 +69,20 @@ class GameClient {
   }
 
   Future<bool> endGame(String gameId, String triggeredBy) async {
-    final response = await _put('/api/game/end',
-        {'gameId': _idPrefix + gameId, 'triggeredBy': _idPrefix + triggeredBy});
+    gameId = _addPrefix(gameId);
+    triggeredBy = _addPrefix(triggeredBy);
+    final response = await _put(
+        '/api/game/end', {'gameId': gameId, 'triggeredBy': triggeredBy});
     if (response.body['gameId'] == null) throw 'Invalid response format';
     if (response.body['status'].toString() != 'finished') return false;
     return true;
   }
 
   Future<bool> join(String gameId, String triggeredBy) async {
-    final response = await _put('/api/game/join',
-        {'gameId': _idPrefix + gameId, 'triggeredBy': _idPrefix + triggeredBy});
+    gameId = _addPrefix(gameId);
+    triggeredBy = _addPrefix(triggeredBy);
+    final response = await _put(
+        '/api/game/join', {'gameId': gameId, 'triggeredBy': triggeredBy});
     if (response.body['userId'].toString() != triggeredBy)
       throw 'Invalid response format';
     if (response.body['joined'].toString() != 'true') return false;
@@ -78,10 +91,13 @@ class GameClient {
 
   Future<KickResult> kick(
       String gameId, String triggeredBy, String targetUserId) async {
+    gameId = _addPrefix(gameId);
+    triggeredBy = _addPrefix(triggeredBy);
+    targetUserId = _addPrefix(targetUserId);
     final response = await _put('/api/game/kick', {
-      'gameId': _idPrefix + gameId,
-      'triggeredBy': _idPrefix + triggeredBy,
-      'targetUserId': _idPrefix + targetUserId
+      'gameId': gameId,
+      'triggeredBy': triggeredBy,
+      'targetUserId': targetUserId
     });
 
     if (response.body['gameId'].toString() == gameId &&
@@ -113,9 +129,11 @@ class GameClient {
   }
 
   Future<bool> finishJoin(String gameId, String triggeredBy) async {
-    final response = await _put('/api/game/finishJoin',
-        {'gameId': _idPrefix + gameId, 'triggeredBy': _idPrefix + triggeredBy});
-    if (response.body['gameId'].toString() != _idPrefix + gameId)
+    gameId = _addPrefix(gameId);
+    triggeredBy = _addPrefix(triggeredBy);
+    final response = await _put(
+        '/api/game/finishJoin', {'gameId': gameId, 'triggeredBy': triggeredBy});
+    if (response.body['gameId'].toString() != gameId)
       throw 'Invalid response format';
 
     if (response.body['state'].toString() != 'sorting') return false;
@@ -125,29 +143,34 @@ class GameClient {
 
   Future<bool> setMaster(
       String gameId, String triggeredBy, String targetUserId) async {
+    gameId = _addPrefix(gameId);
+    triggeredBy = _addPrefix(triggeredBy);
+    targetUserId = _addPrefix(targetUserId);
     final response = await _put('/api/game/setMaster', {
-      'gameId': _idPrefix + gameId,
-      'triggeredBy': _idPrefix + triggeredBy,
-      'targetUserId': _idPrefix + targetUserId
+      'gameId': gameId,
+      'triggeredBy': triggeredBy,
+      'targetUserId': targetUserId
     });
-    if (response.body['gameId'].toString() != _idPrefix + gameId)
+    if (response.body['gameId'].toString() != gameId)
       throw 'Invalid response format';
 
-    if (response.body['newMaster'].toString() != _idPrefix + targetUserId)
-      return false;
+    if (response.body['newMaster'].toString() != targetUserId) return false;
 
     return true;
   }
 
   Future<int> sortPlayer(String gameId, String triggeredBy, String targetUserId,
       int position) async {
+    gameId = _addPrefix(gameId);
+    triggeredBy = _addPrefix(triggeredBy);
+    targetUserId = _addPrefix(targetUserId);
     final response = await _put('/api/game/sortPlayer', {
-      'gameId': _idPrefix + gameId,
-      'triggeredBy': _idPrefix + triggeredBy,
-      'targetUserId': _idPrefix + targetUserId,
+      'gameId': gameId,
+      'triggeredBy': triggeredBy,
+      'targetUserId': targetUserId,
       'position': position
     });
-    if (response.body['gameId'].toString() != _idPrefix + gameId ||
+    if (response.body['gameId'].toString() != gameId ||
         response.body['playerPosition'] == null)
       throw 'Invalid response format';
 
@@ -155,18 +178,22 @@ class GameClient {
   }
 
   Future<bool> sortReset(String gameId, String triggeredBy) async {
-    final response = await _put('/api/game/sortReset',
-        {'gameId': _idPrefix + gameId, 'triggeredBy': _idPrefix + triggeredBy});
-    if (response.body['gameId'].toString() != _idPrefix + gameId)
+    gameId = _addPrefix(gameId);
+    triggeredBy = _addPrefix(triggeredBy);
+    final response = await _put(
+        '/api/game/sortReset', {'gameId': gameId, 'triggeredBy': triggeredBy});
+    if (response.body['gameId'].toString() != gameId)
       throw 'Invalid response format';
 
     return true;
   }
 
   Future<bool> startTrainingFlow(String gameId, String triggeredBy) async {
+    gameId = _addPrefix(gameId);
+    triggeredBy = _addPrefix(triggeredBy);
     final response = await _put('/api/game/training/start',
-        {'gameId': _idPrefix + gameId, 'triggeredBy': _idPrefix + triggeredBy});
-    if (response.body['gameId'].toString() != _idPrefix + gameId)
+        {'gameId': gameId, 'triggeredBy': triggeredBy});
+    if (response.body['gameId'].toString() != gameId)
       throw 'Invalid response format';
 
     if (response.body['state'].toString() != 'training') return false;
@@ -176,9 +203,11 @@ class GameClient {
 
   Future<Map<String, Card>> trainingFlowNextTurn(
       String gameId, String triggeredBy) async {
+    gameId = _addPrefix(gameId);
+    triggeredBy = _addPrefix(triggeredBy);
     final response = await _put('/api/game/training/next',
-        {'gameId': _idPrefix + gameId, 'triggeredBy': _idPrefix + triggeredBy});
-    if (response.body['gameId'].toString() != _idPrefix + gameId ||
+        {'gameId': gameId, 'triggeredBy': triggeredBy});
+    if (response.body['gameId'].toString() != gameId ||
         response.body['card'] == null ||
         response.body['playerId'] == null) throw 'Invalid response format';
 
@@ -188,9 +217,11 @@ class GameClient {
   }
 
   Future<List<Card>> startGameFlow(String gameId, String triggeredBy) async {
-    final response = await _put('/api/game/game/start',
-        {'gameId': _idPrefix + gameId, 'triggeredBy': _idPrefix + triggeredBy});
-    if (response.body['gameId'].toString() != _idPrefix + gameId ||
+    gameId = _addPrefix(gameId);
+    triggeredBy = _addPrefix(triggeredBy);
+    final response = await _put(
+        '/api/game/game/start', {'gameId': gameId, 'triggeredBy': triggeredBy});
+    if (response.body['gameId'].toString() != gameId ||
         response.body['state'].toString() != 'game' ||
         response.body['flowState'].toString() != 'storyTell')
       throw 'Invalid response format';
@@ -207,13 +238,15 @@ class GameClient {
 
   Future<Card> gameFlowSelectCard(
       String gameId, String triggeredBy, CardType cardType) async {
+    gameId = _addPrefix(gameId);
+    triggeredBy = _addPrefix(triggeredBy);
     final response = await _put('/api/game/game/selectCard', {
-      'gameId': _idPrefix + gameId,
-      'triggeredBy': _idPrefix + triggeredBy,
+      'gameId': gameId,
+      'triggeredBy': triggeredBy,
       'selectCardType': cardType.value()
     });
-    if (response.body['gameId'].toString() != _idPrefix + gameId ||
-        response.body['playerId'].toString() != _idPrefix + triggeredBy ||
+    if (response.body['gameId'].toString() != gameId ||
+        response.body['playerId'].toString() != triggeredBy ||
         response.body['card'] == null ||
         response.body['flowState'].toString() != 'storyTell')
       throw 'Invalid response format';
@@ -224,9 +257,11 @@ class GameClient {
   }
 
   Future<String> gameFlowNextTurn(String gameId, String triggeredBy) async {
-    final response = await _put('/api/game/game/next',
-        {'gameId': _idPrefix + gameId, 'triggeredBy': _idPrefix + triggeredBy});
-    if (response.body['gameId'].toString() != _idPrefix + gameId ||
+    gameId = _addPrefix(gameId);
+    triggeredBy = _addPrefix(triggeredBy);
+    final response = await _put(
+        '/api/game/game/next', {'gameId': gameId, 'triggeredBy': triggeredBy});
+    if (response.body['gameId'].toString() != gameId ||
         response.body['playerId'] == null ||
         response.body['flowState'].toString() != 'selectCard')
       throw 'Invalid response format';

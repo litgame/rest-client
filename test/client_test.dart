@@ -23,12 +23,13 @@ void main() async {
     client = createClient();
   });
 
-  tearDown(() {
+  tearDown(() async {
     if (isolate is Isolate) {
       isolate.kill(priority: Isolate.immediate);
       isolate = null;
     }
     receivePort.sendPort.send('die');
+    await Future.delayed(Duration(seconds: 1));
   });
 
   test('version test', () async {
@@ -38,12 +39,12 @@ void main() async {
 
   test('Start game test', () async {
     final gameId = await client.startGame('g-123', 'u-123');
-    expect(gameId, 'g-123');
+    expect(gameId, prefix + 'g-123');
   });
 
   test('End game test', () async {
     final gameId = await client.startGame('g-123', 'u-123');
-    expect(gameId, 'g-123');
+    expect(gameId, prefix + 'g-123');
     var strError = '';
     try {
       await client.endGame(gameId, 'u-456');
@@ -192,12 +193,12 @@ void main() async {
       strError = error.toString();
     }
     expect(strError,
-        'Rest error: {error: It\'s not user\'s u-4 turn now. Player u-1 should trigger next turn}');
+        'Rest error: {error: It\'s not user\'s test-u-4 turn now. Player test-u-1 should trigger next turn}');
 
     var cards = await client.trainingFlowNextTurn(gameId, 'u-1');
-    expect(cards.keys.first, 'u-2');
+    expect(cards.keys.first, 'test-u-2');
     cards = await client.trainingFlowNextTurn(gameId, 'u-2');
-    expect(cards.keys.first, 'u-3');
+    expect(cards.keys.first, 'test-u-3');
   });
 
   test('Start game,full game flow', () async {
@@ -232,11 +233,11 @@ void main() async {
     expect(cardTypes, [CardType.generic, CardType.place, CardType.person]);
 
     var nextPlayer = await client.gameFlowNextTurn(gameId, 'u-1');
-    expect(nextPlayer, 'u-2');
+    expect(nextPlayer, 'test-u-2');
     var card =
         await client.gameFlowSelectCard(gameId, nextPlayer, CardType.person);
     expect(card.cardType, CardType.person);
     nextPlayer = await client.gameFlowNextTurn(gameId, nextPlayer);
-    expect(nextPlayer, 'u-3');
+    expect(nextPlayer, 'test-u-3');
   });
 }
