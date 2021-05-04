@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:litgame_client/models/card_collection.dart';
 import 'package:rest_client/rest_client.dart';
 
 import 'models/card.dart';
+import 'models/card_collection.dart';
 
 class GameClient {
   GameClient(this._baseUrl, [this._idPrefix = '']) : _client = Client();
