@@ -2,8 +2,12 @@ import 'dart:convert';
 
 import 'package:rest_client/rest_client.dart';
 
+import 'exceptions.dart';
 import 'models/card.dart';
 import 'models/card_collection.dart';
+
+export 'exceptions.dart';
+export 'models/error.dart';
 
 class GameClient {
   GameClient(this._baseUrl, [this._idPrefix = '']) : _client = Client();
@@ -13,12 +17,13 @@ class GameClient {
 
   Future<Response> _get(String url) async {
     final request = Request(url: _baseUrl + '$url');
-    final response = await _client.execute(request: request);
 
-    if (response.statusCode != 200)
-      throw 'Rest error: ' + response.body.toString();
-
-    return response;
+    try {
+      return await _client.execute(request: request);
+    } on RestException catch (error) {
+      throw ValidationException(
+          error.response.body['error'], error.response.body['type']);
+    }
   }
 
   Future<Response> _put(String url, Map<String, dynamic> body) async {
@@ -28,7 +33,9 @@ class GameClient {
     try {
       return await _client.execute(request: request);
     } on RestException catch (error) {
-      throw 'Rest error: ' + error.response.body.toString();
+      if (error.response.body == null) rethrow;
+      throw ValidationException(
+          error.response.body['error'], error.response.body['type']);
     }
   }
 
@@ -56,39 +63,53 @@ class GameClient {
     return result;
   }
 
+  Future<Map<String, dynamic>> get games async {
+    final response = await _get('/api/game/list');
+
+    if (response.body['games'] == null) throw 'Invalid response format';
+
+    return response.body['games'];
+  }
+
+  /// throws [ErrorType.exists]
   Future<String> startGame(String gameId, String adminId) async {
     gameId = _addPrefix(gameId);
     adminId = _addPrefix(adminId);
     final response =
         await _put('/api/game/start', {'gameId': gameId, 'adminId': adminId});
 
-    if (response.body['gameId'] == null) throw 'Invalid response format';
+    if (response.body['gameId'] == null)
+      throw FatalException('Invalid response format');
     if (response.body['status'].toString() != 'started')
-      throw 'Invalid game state';
+      throw FatalException('Invalid game state');
     return response.body['gameId'].toString();
   }
 
+  /// throws [ErrorType.access]
   Future<bool> endGame(String gameId, String triggeredBy) async {
     gameId = _addPrefix(gameId);
     triggeredBy = _addPrefix(triggeredBy);
     final response = await _put(
         '/api/game/end', {'gameId': gameId, 'triggeredBy': triggeredBy});
-    if (response.body['gameId'] == null) throw 'Invalid response format';
+    if (response.body['gameId'] == null)
+      throw FatalException('Invalid response format');
     if (response.body['status'].toString() != 'finished') return false;
     return true;
   }
 
+  /// throws [ErrorType.exists], [ErrorType.anotherGame]
   Future<bool> join(String gameId, String triggeredBy) async {
     gameId = _addPrefix(gameId);
     triggeredBy = _addPrefix(triggeredBy);
     final response = await _put(
         '/api/game/join', {'gameId': gameId, 'triggeredBy': triggeredBy});
     if (response.body['userId'].toString() != triggeredBy)
-      throw 'Invalid response format';
+      throw FatalException('Invalid response format');
     if (response.body['joined'].toString() != 'true') return false;
     return true;
   }
 
+  /// throws [ErrorType.notFound], [ErrorType.access]
   Future<KickResult> kick(
       String gameId, String triggeredBy, String targetUserId) async {
     gameId = _addPrefix(gameId);
@@ -105,9 +126,11 @@ class GameClient {
       return KickResult(true, gameStopped: true);
     }
 
-    if (response.body['userId'] == null) throw 'Invalid response format';
+    if (response.body['userId'] == null)
+      throw FatalException('Invalid response format');
     final kicked = response.body['userId'].toString();
-    if (kicked != targetUserId) throw 'Another user was kicked: $kicked';
+    if (kicked != targetUserId)
+      throw FatalException('Another user was kicked: $kicked');
 
     var newMaster;
     var newAdmin;
@@ -128,19 +151,20 @@ class GameClient {
         nextTurnByUserId: nextTurnBy);
   }
 
-  Future<bool> finishJoin(String gameId, String triggeredBy) async {
+  /// throws [ErrorType.access], [ErrorType.state]
+  Future<void> finishJoin(String gameId, String triggeredBy) async {
     gameId = _addPrefix(gameId);
     triggeredBy = _addPrefix(triggeredBy);
     final response = await _put(
         '/api/game/finishJoin', {'gameId': gameId, 'triggeredBy': triggeredBy});
     if (response.body['gameId'].toString() != gameId)
-      throw 'Invalid response format';
+      throw FatalException('Invalid response format');
 
-    if (response.body['state'].toString() != 'sorting') return false;
-
-    return true;
+    if (response.body['state'].toString() != 'sorting')
+      throw FatalException('Invalid state!');
   }
 
+  /// throws [ErrorType.notFound], [ErrorType.access]
   Future<bool> setMaster(
       String gameId, String triggeredBy, String targetUserId) async {
     gameId = _addPrefix(gameId);
@@ -152,13 +176,14 @@ class GameClient {
       'targetUserId': targetUserId
     });
     if (response.body['gameId'].toString() != gameId)
-      throw 'Invalid response format';
+      throw FatalException('Invalid response format');
 
     if (response.body['newMaster'].toString() != targetUserId) return false;
 
     return true;
   }
 
+  /// throws [ErrorType.access], [ErrorType.notFound]
   Future<int> sortPlayer(String gameId, String triggeredBy, String targetUserId,
       int position) async {
     gameId = _addPrefix(gameId);
@@ -172,35 +197,44 @@ class GameClient {
     });
     if (response.body['gameId'].toString() != gameId ||
         response.body['playerPosition'] == null)
-      throw 'Invalid response format';
+      throw FatalException('Invalid response format');
 
     return int.parse(response.body['playerPosition'].toString());
   }
 
-  Future<bool> sortReset(String gameId, String triggeredBy) async {
+  /// throws [ErrorType.access], [ErrorType.notFound]
+  Future<void> sortReset(String gameId, String triggeredBy) async {
     gameId = _addPrefix(gameId);
     triggeredBy = _addPrefix(triggeredBy);
     final response = await _put(
         '/api/game/sortReset', {'gameId': gameId, 'triggeredBy': triggeredBy});
     if (response.body['gameId'].toString() != gameId)
-      throw 'Invalid response format';
-
-    return true;
+      throw FatalException('Invalid response format');
   }
 
-  Future<bool> startTrainingFlow(String gameId, String triggeredBy) async {
+  /// throws [ErrorType.access], [ErrorType.state], [ErrorType.validation]
+  Future<bool> startTrainingFlow(String gameId, String triggeredBy,
+      {String collectionName = 'default', String? collectionId}) async {
     gameId = _addPrefix(gameId);
     triggeredBy = _addPrefix(triggeredBy);
-    final response = await _put('/api/game/training/start',
-        {'gameId': gameId, 'triggeredBy': triggeredBy});
+    var params = {
+      'gameId': gameId,
+      'triggeredBy': triggeredBy,
+      'collectionName': collectionName
+    };
+    if (collectionId != null) {
+      params['collectionId'] = collectionId;
+    }
+    final response = await _put('/api/game/training/start', params);
     if (response.body['gameId'].toString() != gameId)
-      throw 'Invalid response format';
+      throw FatalException('Invalid response format');
 
     if (response.body['state'].toString() != 'training') return false;
 
     return true;
   }
 
+  /// throws [ErrorType.state], [ErrorType.validation]
   Future<Map<String, Card>> trainingFlowNextTurn(
       String gameId, String triggeredBy) async {
     gameId = _addPrefix(gameId);
@@ -209,13 +243,15 @@ class GameClient {
         {'gameId': gameId, 'triggeredBy': triggeredBy});
     if (response.body['gameId'].toString() != gameId ||
         response.body['card'] == null ||
-        response.body['playerId'] == null) throw 'Invalid response format';
+        response.body['playerId'] == null)
+      throw FatalException('Invalid response format');
 
     final card = Card.fromJson(response.body['card']);
 
     return {response.body['playerId'].toString(): card};
   }
 
+  /// throws [ErrorType.access], [ErrorType.state], [ErrorType.validation]
   Future<List<Card>> startGameFlow(String gameId, String triggeredBy) async {
     gameId = _addPrefix(gameId);
     triggeredBy = _addPrefix(triggeredBy);
@@ -224,9 +260,10 @@ class GameClient {
     if (response.body['gameId'].toString() != gameId ||
         response.body['state'].toString() != 'game' ||
         response.body['flowState'].toString() != 'storyTell')
-      throw 'Invalid response format';
+      throw FatalException('Invalid response format');
 
-    if (response.body['initialCards'] == null) throw 'Invalid response format';
+    if (response.body['initialCards'] == null)
+      throw FatalException('Invalid response format');
 
     final cards = <Card>[];
     for (var card in response.body['initialCards']) {
@@ -236,6 +273,7 @@ class GameClient {
     return cards;
   }
 
+  /// throws [ErrorType.state], [ErrorType.validation], [ErrorType.access]
   Future<Card> gameFlowSelectCard(
       String gameId, String triggeredBy, CardType cardType) async {
     gameId = _addPrefix(gameId);
@@ -249,13 +287,14 @@ class GameClient {
         response.body['playerId'].toString() != triggeredBy ||
         response.body['card'] == null ||
         response.body['flowState'].toString() != 'storyTell')
-      throw 'Invalid response format';
+      throw FatalException('Invalid response format');
 
     final card = Card.fromJson(response.body['card']);
 
     return card;
   }
 
+  /// throws [ErrorType.state], [ErrorType.validation], [ErrorType.access]
   Future<String> gameFlowNextTurn(String gameId, String triggeredBy) async {
     gameId = _addPrefix(gameId);
     triggeredBy = _addPrefix(triggeredBy);
@@ -264,7 +303,7 @@ class GameClient {
     if (response.body['gameId'].toString() != gameId ||
         response.body['playerId'] == null ||
         response.body['flowState'].toString() != 'selectCard')
-      throw 'Invalid response format';
+      throw FatalException('Invalid response format');
 
     return response.body['playerId'].toString();
   }
