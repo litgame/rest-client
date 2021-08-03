@@ -273,6 +273,23 @@ class GameClient {
     return {response.body['playerId'].toString(): card};
   }
 
+  /// throws [ErrorType.state], [ErrorType.validation]
+  Future<Map<String, Card>> trainingFlowSkipTurn(
+      String gameId, String triggeredBy) async {
+    gameId = _addPrefix(gameId);
+    triggeredBy = _addPrefix(triggeredBy);
+    final response = await _put('/api/game/training/skip',
+        {'gameId': gameId, 'triggeredBy': triggeredBy});
+    if (response.body['gameId'].toString() != gameId ||
+        response.body['card'] == null ||
+        response.body['playerId'] == null)
+      throw FatalException('Invalid response format');
+
+    final card = Card.fromJson(response.body['card']);
+
+    return {response.body['playerId'].toString(): card};
+  }
+
   /// throws [ErrorType.access], [ErrorType.state], [ErrorType.validation]
   Future<List<Card>> startGameFlow(String gameId, String triggeredBy) async {
     gameId = _addPrefix(gameId);
@@ -322,6 +339,20 @@ class GameClient {
     triggeredBy = _addPrefix(triggeredBy);
     final response = await _put(
         '/api/game/game/next', {'gameId': gameId, 'triggeredBy': triggeredBy});
+    if (response.body['gameId'].toString() != gameId ||
+        response.body['playerId'] == null ||
+        response.body['flowState'].toString() != 'selectCard')
+      throw FatalException('Invalid response format');
+
+    return response.body['playerId'].toString();
+  }
+
+  /// throws [ErrorType.state], [ErrorType.validation], [ErrorType.access]
+  Future<String> gameFlowSkipTurn(String gameId, String triggeredBy) async {
+    gameId = _addPrefix(gameId);
+    triggeredBy = _addPrefix(triggeredBy);
+    final response = await _put(
+        '/api/game/game/skip', {'gameId': gameId, 'triggeredBy': triggeredBy});
     if (response.body['gameId'].toString() != gameId ||
         response.body['playerId'] == null ||
         response.body['flowState'].toString() != 'selectCard')
