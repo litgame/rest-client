@@ -71,15 +71,26 @@ class GameClient {
     return response.body['games'];
   }
 
-
   Future<Map<String, dynamic>> getGameInfo(String gameId) async {
     gameId = _addPrefix(gameId);
-    
+
     final response = await _get('/api/game/info?id=$gameId');
 
     if (response.body == null) throw 'Invalid response format';
 
     return response.body;
+  }
+
+  Future<String> getPlayerExistingGame(String playerId) async {
+    playerId = _addPrefix(playerId);
+
+    final response =
+        await _put('/api/game/findGameOfPlayer', {'playerId': playerId});
+
+    if (response.body['gameId'] == null)
+      throw FatalException('Invalid response format');
+
+    return response.body['gameId'].toString();
   }
 
   /// throws [ErrorType.exists]
