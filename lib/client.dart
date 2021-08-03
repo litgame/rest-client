@@ -81,7 +81,7 @@ class GameClient {
     return response.body;
   }
 
-  Future<String> getPlayerExistingGame(String playerId) async {
+  Future<String> findGameOfPlayer(String playerId) async {
     playerId = _addPrefix(playerId);
 
     final response =
