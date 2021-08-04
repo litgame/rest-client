@@ -133,15 +133,22 @@ class GameClient {
 
   /// throws [ErrorType.notFound], [ErrorType.access]
   Future<KickResult> kick(
-      String gameId, String triggeredBy, String targetUserId) async {
-    gameId = _addPrefix(gameId);
-    triggeredBy = _addPrefix(triggeredBy);
-    targetUserId = _addPrefix(targetUserId);
-    final response = await _put('/api/game/kick', {
-      'gameId': gameId,
-      'triggeredBy': triggeredBy,
-      'targetUserId': targetUserId
-    });
+      String gameId, String triggeredBy, String targetUserId,
+      {String? newMasterId, String? newAdminId}) async {
+    final body = {
+      'gameId': _addPrefix(gameId),
+      'triggeredBy': _addPrefix(triggeredBy),
+      'targetUserId': _addPrefix(targetUserId)
+    };
+
+    if (newMasterId != null) {
+      body['newMasterId'] = _addPrefix(newMasterId);
+    }
+    if (newAdminId != null) {
+      body['newAdminId'] = _addPrefix(newAdminId);
+    }
+
+    final response = await _put('/api/game/kick', body);
 
     if (response.body['gameId'].toString() == gameId &&
         response.body['status'].toString() == 'finished') {
