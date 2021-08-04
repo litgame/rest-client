@@ -135,10 +135,11 @@ class GameClient {
   Future<KickResult> kick(
       String gameId, String triggeredBy, String targetUserId,
       {String? newMasterId, String? newAdminId}) async {
+    targetUserId = _addPrefix(targetUserId);
     final body = {
       'gameId': _addPrefix(gameId),
       'triggeredBy': _addPrefix(triggeredBy),
-      'targetUserId': _addPrefix(targetUserId)
+      'targetUserId': targetUserId
     };
 
     if (newMasterId != null) {
