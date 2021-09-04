@@ -261,7 +261,13 @@ class GameClient {
     if (response.body['gameId'].toString() != gameId)
       throw FatalException('Invalid response format');
 
-    if (response.body['state'].toString() != 'training') return false;
+    if (response.body['state'].toString() != 'training') {
+      var error = response.body['error'];
+      if (error == null) {
+        error = "Can't change state to training";
+      }
+      throw FatalException(error);
+    }
 
     return true;
   }
