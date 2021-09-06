@@ -120,12 +120,21 @@ class GameClient {
   }
 
   /// throws [ErrorType.exists], [ErrorType.anotherGame]
-  Future<bool> join(String gameId, String triggeredBy) async {
+  Future<bool> join(String gameId, String triggeredBy,
+      {String? targetUserId, int? position}) async {
     gameId = _addPrefix(gameId);
     triggeredBy = _addPrefix(triggeredBy);
-    final response = await _put(
-        '/api/game/join', {'gameId': gameId, 'triggeredBy': triggeredBy});
-    if (response.body['userId'].toString() != triggeredBy)
+    var data = {'gameId': gameId, 'triggeredBy': triggeredBy};
+    if (targetUserId != null && position != null) {
+      data['targetUserId'] = targetUserId = _addPrefix(targetUserId);
+      data['position'] = position.toString();
+    }
+    final response = await _put('/api/game/join', data);
+    if (targetUserId != null) {
+      if (response.body['userId'].toString() != targetUserId) {
+        throw FatalException('Invalid response format');
+      }
+    } else if (response.body['userId'].toString() != triggeredBy)
       throw FatalException('Invalid response format');
     if (response.body['joined'].toString() != 'true') return false;
     return true;
