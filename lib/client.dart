@@ -180,7 +180,7 @@ class GameClient {
       newMaster = response.body['newMaster'].toString();
     }
     if (response.body['newAdmin'] != null) {
-      newMaster = response.body['newAdmin'].toString();
+      newAdmin = response.body['newAdmin'].toString();
     }
     if (response.body['nextTurnByUserId'] != null) {
       nextTurnBy = response.body['nextTurnByUserId'].toString();
